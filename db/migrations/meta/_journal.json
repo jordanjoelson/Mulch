@@ -15,6 +15,13 @@
       "when": 1783384970506,
       "tag": "0001_cool_blizzard",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1783392731717,
+      "tag": "0002_famous_husk",
+      "breakpoints": true
     }
   ]
 }

@@ -7,6 +7,7 @@ export const connections = sqliteTable("connections", {
   itemId: text("item_id").notNull().unique(),
   institutionName: text("institution_name"),
   accessToken: text("access_token").notNull(), // encrypted at rest
+  transactionCursor: text("transaction_cursor"),
   createdAt: text("created_at")
     .notNull()
     .default(sql`(current_timestamp)`),
@@ -30,4 +31,17 @@ export const accounts = sqliteTable("accounts", {
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),
+});
+
+// One row per transaction, kept in sync via Plaid's /transactions/sync.
+export const transactions = sqliteTable("transactions", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  transactionId: text("transaction_id").notNull().unique(),
+  accountId: text("account_id").notNull(),
+  name: text("name"),
+  merchantName: text("merchant_name"),
+  amount: real("amount"),
+  date: text("date"),
+  category: text("category"),
+  pending: integer("pending", { mode: "boolean" }),
 });
