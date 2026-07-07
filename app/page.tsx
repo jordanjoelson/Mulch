@@ -1,4 +1,4 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, connections, transactions } from "@/db/schema";
 import { ConnectBank } from "./connect-bank";
@@ -62,6 +62,21 @@ export default async function Home() {
     .from(transactions)
     .orderBy(desc(transactions.date))
     .limit(25);
+
+  // Spending (positive amounts = money out) by category, last 30 days.
+  const since = new Date(Date.now() - 30 * 86_400_000)
+    .toISOString()
+    .slice(0, 10);
+  const spending = await db
+    .select({
+      category: transactions.category,
+      total: sql<number>`sum(${transactions.amount})`.as("total"),
+    })
+    .from(transactions)
+    .where(and(gt(transactions.amount, 0), gte(transactions.date, since)))
+    .groupBy(transactions.category)
+    .orderBy(desc(sql`total`));
+  const maxSpend = spending[0]?.total ?? 0;
 
   return (
     <main style={{ maxWidth: 640, margin: "2rem auto", fontFamily: "system-ui" }}>
@@ -172,6 +187,40 @@ export default async function Home() {
               </li>
             );
           })}
+        </ul>
+      )}
+
+      <h2>Spending by category</h2>
+      <small style={{ color: "#888" }}>last 30 days</small>
+      {spending.length === 0 ? (
+        <p>No spending yet.</p>
+      ) : (
+        <ul style={{ listStyle: "none", padding: 0 }}>
+          {spending.map((s) => (
+            <li key={s.category ?? "uncategorized"} style={{ padding: "0.4rem 0" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}>
+                <span>{s.category ?? "Uncategorized"}</span>
+                <span>{money(s.total)}</span>
+              </div>
+              <div
+                style={{
+                  height: 6,
+                  borderRadius: 3,
+                  marginTop: 3,
+                  background: "#eee",
+                  overflow: "hidden",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${maxSpend > 0 ? (s.total / maxSpend) * 100 : 0}%`,
+                    height: "100%",
+                    background: "#1976d2",
+                  }}
+                />
+              </div>
+            </li>
+          ))}
         </ul>
       )}
 
