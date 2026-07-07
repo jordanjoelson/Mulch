@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev --webpack",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -13,6 +13,7 @@
   "dependencies": {
     "better-sqlite3": "^12.11.1",
     "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "plaid": "^43.0.0",
     "react": "19.2.4",
@@ -20,6 +21,7 @@
     "react-plaid-link": "^4.1.1"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.3.2",
     "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^20",
     "@types/react": "^19",
@@ -27,6 +29,7 @@
     "drizzle-kit": "^0.31.10",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "tailwindcss": "^4.3.2",
     "typescript": "^5"
   }
 }
