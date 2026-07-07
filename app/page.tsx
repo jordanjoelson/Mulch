@@ -18,6 +18,20 @@ function utilColor(pct: number) {
   return "#d32f2f";
 }
 
+// Days until a YYYY-MM-DD due date (negative = past due).
+function daysUntil(dateStr: string) {
+  const due = new Date(dateStr + "T00:00:00");
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
+}
+
+function dueLabel(days: number) {
+  if (days < 0) return `overdue by ${-days}d`;
+  if (days === 0) return "due today";
+  return `due in ${days}d`;
+}
+
 export default async function Home() {
   const rows = await db
     .select({
@@ -28,6 +42,8 @@ export default async function Home() {
       mask: accounts.mask,
       currentBalance: accounts.currentBalance,
       creditLimit: accounts.creditLimit,
+      nextPaymentDueDate: accounts.nextPaymentDueDate,
+      minimumPayment: accounts.minimumPayment,
       institution: connections.institutionName,
     })
     .from(accounts)
@@ -113,6 +129,23 @@ export default async function Home() {
                       {util.toFixed(0)}% utilization
                     </small>
                   </div>
+                )}
+                {a.nextPaymentDueDate && (
+                  <small style={{ color: "#555" }}>
+                    {a.nextPaymentDueDate} ·{" "}
+                    <span
+                      style={{
+                        color:
+                          daysUntil(a.nextPaymentDueDate) < 0
+                            ? "#d32f2f"
+                            : "#555",
+                      }}
+                    >
+                      {dueLabel(daysUntil(a.nextPaymentDueDate))}
+                    </span>
+                    {a.minimumPayment != null &&
+                      ` · min ${money(a.minimumPayment)}`}
+                  </small>
                 )}
               </li>
             );
