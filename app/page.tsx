@@ -2,6 +2,7 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, connections, transactions } from "@/db/schema";
 import { ConnectBank } from "./connect-bank";
+import { RefreshButton } from "./refresh-button";
 
 export const dynamic = "force-dynamic";
 
@@ -41,7 +42,10 @@ export default async function Home() {
   return (
     <main style={{ maxWidth: 640, margin: "2rem auto", fontFamily: "system-ui" }}>
       <h1>Mulch</h1>
-      <ConnectBank />
+      <div style={{ display: "flex", gap: "0.5rem" }}>
+        <ConnectBank />
+        <RefreshButton />
+      </div>
 
       <h2>Accounts</h2>
       {rows.length === 0 ? (
