@@ -11,6 +11,13 @@ function money(n: number | null) {
   return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
 
+// Green under 30%, amber under 70%, red above — standard credit-utilization bands.
+function utilColor(pct: number) {
+  if (pct < 30) return "#2e7d32";
+  if (pct < 70) return "#ed6c02";
+  return "#d32f2f";
+}
+
 export default async function Home() {
   const rows = await db
     .select({
@@ -52,30 +59,64 @@ export default async function Home() {
         <p>No accounts yet. Connect a bank to get started.</p>
       ) : (
         <ul style={{ listStyle: "none", padding: 0 }}>
-          {rows.map((a) => (
-            <li
-              key={a.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "0.5rem 0",
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <span>
-                {a.name} {a.mask ? `••${a.mask}` : ""}{" "}
-                <small style={{ color: "#888" }}>
-                  {a.institution} · {a.subtype}
-                </small>
-              </span>
-              <span>
-                {money(a.currentBalance)}
-                {a.creditLimit != null && (
-                  <small style={{ color: "#888" }}> / {money(a.creditLimit)}</small>
+          {rows.map((a) => {
+            const util =
+              a.type === "credit" &&
+              a.creditLimit != null &&
+              a.creditLimit > 0 &&
+              a.currentBalance != null
+                ? (a.currentBalance / a.creditLimit) * 100
+                : null;
+            return (
+              <li
+                key={a.id}
+                style={{ padding: "0.5rem 0", borderBottom: "1px solid #eee" }}
+              >
+                <div
+                  style={{ display: "flex", justifyContent: "space-between" }}
+                >
+                  <span>
+                    {a.name} {a.mask ? `••${a.mask}` : ""}{" "}
+                    <small style={{ color: "#888" }}>
+                      {a.institution} · {a.subtype}
+                    </small>
+                  </span>
+                  <span>
+                    {money(a.currentBalance)}
+                    {a.creditLimit != null && (
+                      <small style={{ color: "#888" }}>
+                        {" "}
+                        / {money(a.creditLimit)}
+                      </small>
+                    )}
+                  </span>
+                </div>
+                {util != null && (
+                  <div style={{ marginTop: 4 }}>
+                    <div
+                      style={{
+                        height: 6,
+                        borderRadius: 3,
+                        background: "#eee",
+                        overflow: "hidden",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: `${Math.min(util, 100)}%`,
+                          height: "100%",
+                          background: utilColor(util),
+                        }}
+                      />
+                    </div>
+                    <small style={{ color: utilColor(util) }}>
+                      {util.toFixed(0)}% utilization
+                    </small>
+                  </div>
                 )}
-              </span>
-            </li>
-          ))}
+              </li>
+            );
+          })}
         </ul>
       )}
 
