@@ -1,36 +1,32 @@
+import Link from "next/link";
 import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
+import { ExternalLink, ArrowRight } from "lucide-react";
 import { db } from "@/db";
 import { accounts, connections, transactions } from "@/db/schema";
-import { ConnectBank } from "./connect-bank";
-import { RefreshButton } from "./refresh-button";
 import { issuerPayUrl } from "@/lib/issuer-links";
+import { money, utilColor, daysUntil, dueLabel } from "@/lib/format";
+import {
+  PageHeader,
+  SectionHead,
+  Card,
+  EmptyState,
+  Tile,
+  Th,
+  Td,
+} from "@/app/components/ui";
+import { SpendingBars } from "@/app/components/spending-bars";
 
 export const dynamic = "force-dynamic";
 
-function money(n: number | null) {
-  if (n == null) return "—";
-  return n.toLocaleString("en-US", { style: "currency", currency: "USD" });
-}
-
-// Green under 30%, amber under 70%, red above — standard credit-utilization bands.
-function utilColor(pct: number) {
-  if (pct < 30) return "#2e7d32";
-  if (pct < 70) return "#ed6c02";
-  return "#d32f2f";
-}
-
-// Days until a YYYY-MM-DD due date (negative = past due).
-function daysUntil(dateStr: string) {
-  const due = new Date(dateStr + "T00:00:00");
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  return Math.round((due.getTime() - today.getTime()) / 86_400_000);
-}
-
-function dueLabel(days: number) {
-  if (days < 0) return `overdue by ${-days}d`;
-  if (days === 0) return "due today";
-  return `due in ${days}d`;
+function ViewAll({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center gap-1 text-ink-dim transition-colors hover:text-ink"
+    >
+      View all <ArrowRight className="h-3 w-3" />
+    </Link>
+  );
 }
 
 export default async function Home() {
@@ -61,7 +57,7 @@ export default async function Home() {
     })
     .from(transactions)
     .orderBy(desc(transactions.date))
-    .limit(25);
+    .limit(8);
 
   // Spending (positive amounts = money out) by category, last 30 days.
   const since = new Date(Date.now() - 30 * 86_400_000)
@@ -76,180 +72,210 @@ export default async function Home() {
     .where(and(gt(transactions.amount, 0), gte(transactions.date, since)))
     .groupBy(transactions.category)
     .orderBy(desc(sql`total`));
-  const maxSpend = spending[0]?.total ?? 0;
+
+  // ── Summary tiles ──
+  const cashRows = rows.filter((a) => a.type === "depository");
+  const cash = cashRows.reduce((s, a) => s + (a.currentBalance ?? 0), 0);
+  const creditRows = rows.filter((a) => a.type === "credit");
+  const creditUsed = creditRows.reduce((s, a) => s + (a.currentBalance ?? 0), 0);
+  const creditLimit = creditRows.reduce((s, a) => s + (a.creditLimit ?? 0), 0);
+  const overallUtil = creditLimit > 0 ? (creditUsed / creditLimit) * 100 : null;
+
+  if (rows.length === 0) {
+    return (
+      <>
+        <PageHeader
+          title="Overview"
+          subtitle="Accounts, spending, and card activity at a glance."
+        />
+        <EmptyState>No accounts yet. Connect a bank to get started.</EmptyState>
+      </>
+    );
+  }
 
   return (
-    <main style={{ maxWidth: 640, margin: "2rem auto", fontFamily: "system-ui" }}>
-      <h1>Mulch</h1>
-      <div style={{ display: "flex", gap: "0.5rem" }}>
-        <ConnectBank />
-        <RefreshButton />
+    <>
+      <PageHeader
+        title="Overview"
+        subtitle="Accounts, spending, and card activity at a glance."
+      />
+
+      {/* Summary tiles */}
+      <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <Tile
+          label="Cash"
+          value={money(cash)}
+          sub={`across ${cashRows.length} account${cashRows.length === 1 ? "" : "s"}`}
+        />
+        <Tile
+          label="Credit used"
+          value={money(creditUsed)}
+          sub={`of ${money(creditLimit)} limit`}
+        />
+        <Tile
+          label="Utilization"
+          value={overallUtil == null ? "—" : `${overallUtil.toFixed(0)}%`}
+          sub={`${creditRows.length} card${creditRows.length === 1 ? "" : "s"}`}
+          valueColor={overallUtil == null ? undefined : utilColor(overallUtil)}
+        />
       </div>
 
-      <h2>Accounts</h2>
-      {rows.length === 0 ? (
-        <p>No accounts yet. Connect a bank to get started.</p>
-      ) : (
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {rows.map((a) => {
-            const util =
-              a.type === "credit" &&
-              a.creditLimit != null &&
-              a.creditLimit > 0 &&
-              a.currentBalance != null
-                ? (a.currentBalance / a.creditLimit) * 100
-                : null;
-            const payUrl =
-              a.type === "credit" ? issuerPayUrl(a.institution) : null;
-            return (
-              <li
-                key={a.id}
-                style={{ padding: "0.5rem 0", borderBottom: "1px solid #eee" }}
-              >
-                <div
-                  style={{ display: "flex", justifyContent: "space-between" }}
-                >
-                  <span>
-                    {a.name} {a.mask ? `••${a.mask}` : ""}{" "}
-                    <small style={{ color: "#888" }}>
-                      {a.institution} · {a.subtype}
-                    </small>
-                  </span>
-                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <span>
+      {/* Accounts */}
+      <SectionHead title="Accounts" meta={`${rows.length} total`} />
+      <Card className="mb-10">
+        <div className="overflow-x-auto">
+          <table className="w-full border-collapse">
+            <thead>
+              <tr className="bg-[rgba(25,25,24,0.02)]">
+                <Th>Account</Th>
+                <Th>Institution</Th>
+                <Th className="text-right">Balance</Th>
+                <Th>Utilization</Th>
+                <Th>Due</Th>
+                <Th className="text-right">Action</Th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((a) => {
+                const util =
+                  a.type === "credit" &&
+                  a.creditLimit != null &&
+                  a.creditLimit > 0 &&
+                  a.currentBalance != null
+                    ? (a.currentBalance / a.creditLimit) * 100
+                    : null;
+                const payUrl =
+                  a.type === "credit" ? issuerPayUrl(a.institution) : null;
+                const days = a.nextPaymentDueDate
+                  ? daysUntil(a.nextPaymentDueDate)
+                  : null;
+                return (
+                  <tr key={a.id} className="border-t border-ink-faint align-middle">
+                    <Td>
+                      <div className="font-medium">
+                        {a.name}{" "}
+                        {a.mask && (
+                          <span className="font-mono text-xs text-ink-dim">
+                            ••{a.mask}
+                          </span>
+                        )}
+                      </div>
+                      <div className="text-xs text-ink-dim">{a.subtype}</div>
+                    </Td>
+                    <Td className="text-ink-dim">{a.institution}</Td>
+                    <Td className="text-right font-mono">
                       {money(a.currentBalance)}
                       {a.creditLimit != null && (
-                        <small style={{ color: "#888" }}>
-                          {" "}
-                          / {money(a.creditLimit)}
-                        </small>
+                        <span className="text-ink-dim"> / {money(a.creditLimit)}</span>
                       )}
-                    </span>
-                    {payUrl && (
-                      <a
-                        href={payUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        style={{
-                          fontSize: 13,
-                          padding: "2px 10px",
-                          borderRadius: 4,
-                          background: "#1976d2",
-                          color: "#fff",
-                          textDecoration: "none",
-                        }}
-                      >
-                        Pay
-                      </a>
-                    )}
-                  </span>
-                </div>
-                {util != null && (
-                  <div style={{ marginTop: 4 }}>
-                    <div
-                      style={{
-                        height: 6,
-                        borderRadius: 3,
-                        background: "#eee",
-                        overflow: "hidden",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: `${Math.min(util, 100)}%`,
-                          height: "100%",
-                          background: utilColor(util),
-                        }}
-                      />
-                    </div>
-                    <small style={{ color: utilColor(util) }}>
-                      {util.toFixed(0)}% utilization
-                    </small>
-                  </div>
-                )}
-                {a.nextPaymentDueDate && (
-                  <small style={{ color: "#555" }}>
-                    {a.nextPaymentDueDate} ·{" "}
-                    <span
-                      style={{
-                        color:
-                          daysUntil(a.nextPaymentDueDate) < 0
-                            ? "#d32f2f"
-                            : "#555",
-                      }}
-                    >
-                      {dueLabel(daysUntil(a.nextPaymentDueDate))}
-                    </span>
-                    {a.minimumPayment != null &&
-                      ` · min ${money(a.minimumPayment)}`}
-                  </small>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
+                    </Td>
+                    <Td>
+                      {util == null ? (
+                        <span className="text-ink-dim">—</span>
+                      ) : (
+                        <div className="w-28">
+                          <div className="h-1.5 overflow-hidden rounded-full bg-ink-faint">
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${Math.min(util, 100)}%`,
+                                background: utilColor(util),
+                              }}
+                            />
+                          </div>
+                          <span
+                            className="mt-1 block font-mono text-[0.6rem]"
+                            style={{ color: utilColor(util) }}
+                          >
+                            {util.toFixed(0)}%
+                          </span>
+                        </div>
+                      )}
+                    </Td>
+                    <Td>
+                      {days == null ? (
+                        <span className="text-ink-dim">—</span>
+                      ) : (
+                        <div className="text-xs">
+                          <div style={{ color: days < 0 ? "var(--color-bad)" : undefined }}>
+                            {dueLabel(days)}
+                          </div>
+                          {a.minimumPayment != null && (
+                            <div className="text-ink-dim">
+                              min {money(a.minimumPayment)}
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </Td>
+                    <Td className="text-right">
+                      {payUrl ? (
+                        <a
+                          href={payUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1.5 rounded border border-ink-faint px-2.5 py-1 font-mono text-[0.6rem] uppercase tracking-wide transition-colors hover:border-ink hover:bg-[rgba(25,25,24,0.03)]"
+                        >
+                          Pay
+                          <ExternalLink className="h-3 w-3" />
+                        </a>
+                      ) : (
+                        <span className="text-ink-dim">—</span>
+                      )}
+                    </Td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
-      <h2>Spending by category</h2>
-      <small style={{ color: "#888" }}>last 30 days</small>
-      {spending.length === 0 ? (
-        <p>No spending yet.</p>
-      ) : (
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {spending.map((s) => (
-            <li key={s.category ?? "uncategorized"} style={{ padding: "0.4rem 0" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
-                <span>{s.category ?? "Uncategorized"}</span>
-                <span>{money(s.total)}</span>
-              </div>
-              <div
-                style={{
-                  height: 6,
-                  borderRadius: 3,
-                  marginTop: 3,
-                  background: "#eee",
-                  overflow: "hidden",
-                }}
-              >
-                <div
-                  style={{
-                    width: `${maxSpend > 0 ? (s.total / maxSpend) * 100 : 0}%`,
-                    height: "100%",
-                    background: "#1976d2",
-                  }}
-                />
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
+      {/* Spending snapshot */}
+      <SectionHead
+        title="Spending by category"
+        meta={
+          spending.length > 5 ? <ViewAll href="/spending" /> : "last 30 days"
+        }
+      />
+      <Card className="mb-10 p-6">
+        {spending.length === 0 ? (
+          <p className="text-sm text-ink-dim">No spending yet.</p>
+        ) : (
+          <SpendingBars rows={spending.slice(0, 5)} />
+        )}
+      </Card>
 
-      <h2>Recent transactions</h2>
-      {recentTxns.length === 0 ? (
-        <p>No transactions yet.</p>
-      ) : (
-        <ul style={{ listStyle: "none", padding: 0 }}>
-          {recentTxns.map((t) => (
-            <li
-              key={t.id}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "0.5rem 0",
-                borderBottom: "1px solid #eee",
-              }}
-            >
-              <span>
-                {t.merchantName ?? t.name}{" "}
-                <small style={{ color: "#888" }}>
-                  {t.date} · {t.category}
-                </small>
-              </span>
-              <span>{money(t.amount)}</span>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+      {/* Recent transactions preview */}
+      <SectionHead title="Recent transactions" meta={<ViewAll href="/transactions" />} />
+      <Card>
+        {recentTxns.length === 0 ? (
+          <p className="px-6 py-8 text-sm text-ink-dim">No transactions yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr className="bg-[rgba(25,25,24,0.02)]">
+                  <Th>Merchant</Th>
+                  <Th>Category</Th>
+                  <Th>Date</Th>
+                  <Th className="text-right">Amount</Th>
+                </tr>
+              </thead>
+              <tbody>
+                {recentTxns.map((t) => (
+                  <tr key={t.id} className="border-t border-ink-faint">
+                    <Td className="font-medium">{t.merchantName ?? t.name}</Td>
+                    <Td className="text-ink-dim">{t.category}</Td>
+                    <Td className="font-mono text-ink-dim">{t.date}</Td>
+                    <Td className="text-right font-mono">{money(t.amount)}</Td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </Card>
+    </>
   );
 }
