@@ -12,9 +12,16 @@ export function ConnectBank() {
       .then((data) => setLinkToken(data.link_token));
   }, []);
 
-  const onSuccess = useCallback((publicToken: string) => {
-    // Next piece: exchange this for an access token and save the connection.
-    console.log("Plaid public token:", publicToken);
+  const onSuccess = useCallback(async (publicToken: string, metadata: { institution?: { name?: string } | null }) => {
+    await fetch("/api/plaid/exchange", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        public_token: publicToken,
+        institution_name: metadata.institution?.name ?? null,
+      }),
+    });
+    window.location.reload();
   }, []);
 
   const { open, ready } = usePlaidLink({
