@@ -28,6 +28,10 @@ export const accounts = sqliteTable("accounts", {
   currentBalance: real("current_balance"),
   availableBalance: real("available_balance"),
   creditLimit: real("credit_limit"),
+  // Credit card liabilities (Plaid Liabilities product).
+  nextPaymentDueDate: text("next_payment_due_date"),
+  minimumPayment: real("minimum_payment"),
+  lastStatementBalance: real("last_statement_balance"),
   updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),

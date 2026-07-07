@@ -5,6 +5,7 @@ import { db } from "@/db";
 import { connections } from "@/db/schema";
 import { syncAccountsForConnection } from "@/lib/sync-accounts";
 import { syncTransactionsForConnection } from "@/lib/sync-transactions";
+import { syncLiabilitiesForConnection } from "@/lib/sync-liabilities";
 
 export async function POST(request: Request) {
   const { public_token, institution_name } = await request.json();
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     .returning({ id: connections.id });
 
   await syncAccountsForConnection(conn.id);
+  await syncLiabilitiesForConnection(conn.id);
   await syncTransactionsForConnection(conn.id);
 
   return NextResponse.json({ ok: true, item_id: itemId });
