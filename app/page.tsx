@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { accounts, connections, transactions } from "@/db/schema";
 import { ConnectBank } from "./connect-bank";
 import { RefreshButton } from "./refresh-button";
+import { issuerPayUrl } from "@/lib/issuer-links";
 
 export const dynamic = "force-dynamic";
 
@@ -83,6 +84,8 @@ export default async function Home() {
               a.currentBalance != null
                 ? (a.currentBalance / a.creditLimit) * 100
                 : null;
+            const payUrl =
+              a.type === "credit" ? issuerPayUrl(a.institution) : null;
             return (
               <li
                 key={a.id}
@@ -97,13 +100,32 @@ export default async function Home() {
                       {a.institution} · {a.subtype}
                     </small>
                   </span>
-                  <span>
-                    {money(a.currentBalance)}
-                    {a.creditLimit != null && (
-                      <small style={{ color: "#888" }}>
-                        {" "}
-                        / {money(a.creditLimit)}
-                      </small>
+                  <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <span>
+                      {money(a.currentBalance)}
+                      {a.creditLimit != null && (
+                        <small style={{ color: "#888" }}>
+                          {" "}
+                          / {money(a.creditLimit)}
+                        </small>
+                      )}
+                    </span>
+                    {payUrl && (
+                      <a
+                        href={payUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{
+                          fontSize: 13,
+                          padding: "2px 10px",
+                          borderRadius: 4,
+                          background: "#1976d2",
+                          color: "#fff",
+                          textDecoration: "none",
+                        }}
+                      >
+                        Pay
+                      </a>
                     )}
                   </span>
                 </div>
