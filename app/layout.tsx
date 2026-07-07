@@ -5,6 +5,7 @@ import { Sidebar } from "./components/sidebar";
 import { Breadcrumb } from "./components/breadcrumb";
 import { ConnectBank } from "./connect-bank";
 import { RefreshButton } from "./refresh-button";
+import { ChatWidget } from "./components/chat-widget";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -44,6 +45,7 @@ export default function RootLayout({
             </main>
           </div>
         </div>
+        <ChatWidget />
       </body>
     </html>
   );
