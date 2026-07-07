@@ -10,7 +10,6 @@ import {
   SectionHead,
   Card,
   EmptyState,
-  Tile,
   Th,
   Td,
 } from "@/app/components/ui";
@@ -100,24 +99,52 @@ export default async function Home() {
         subtitle="Accounts, spending, and card activity at a glance."
       />
 
-      {/* Summary tiles */}
-      <div className="mb-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <Tile
-          label="Cash"
-          value={money(cash)}
-          sub={`across ${cashRows.length} account${cashRows.length === 1 ? "" : "s"}`}
-        />
-        <Tile
-          label="Credit used"
-          value={money(creditUsed)}
-          sub={`of ${money(creditLimit)} limit`}
-        />
-        <Tile
-          label="Utilization"
-          value={overallUtil == null ? "—" : `${overallUtil.toFixed(0)}%`}
-          sub={`${creditRows.length} card${creditRows.length === 1 ? "" : "s"}`}
-          valueColor={overallUtil == null ? undefined : utilColor(overallUtil)}
-        />
+      {/* Summary bento — Cash hero (spans both rows) + Credit/Utilization stack */}
+      <div className="mb-10 grid grid-cols-1 overflow-hidden rounded-[10px] border border-ink-faint bg-card sm:grid-cols-2 sm:grid-rows-2">
+        {/* Cash — hero cell */}
+        <div className="p-6 transition-colors hover:bg-[rgba(25,25,24,0.025)] sm:row-span-2 sm:flex sm:flex-col sm:justify-center">
+          <div className="eyebrow mb-2">Cash</div>
+          <div className="font-mono text-3xl font-medium">{money(cash)}</div>
+          <div className="mt-1 text-xs text-ink-dim">
+            across {cashRows.length} account{cashRows.length === 1 ? "" : "s"}
+          </div>
+        </div>
+
+        {/* Credit used */}
+        <div className="border-t border-ink-faint p-5 transition-colors hover:bg-[rgba(25,25,24,0.025)] sm:border-t-0 sm:border-l">
+          <div className="eyebrow mb-2">Credit used</div>
+          <div className="font-mono text-2xl font-medium">{money(creditUsed)}</div>
+          <div className="mt-1 text-xs text-ink-dim">
+            of {money(creditLimit)} limit
+          </div>
+        </div>
+
+        {/* Utilization */}
+        <div className="border-t border-ink-faint p-5 transition-colors hover:bg-[rgba(25,25,24,0.025)] sm:border-l">
+          <div className="eyebrow mb-2">Utilization</div>
+          <div
+            className="font-mono text-2xl font-medium"
+            style={
+              overallUtil == null ? undefined : { color: utilColor(overallUtil) }
+            }
+          >
+            {overallUtil == null ? "—" : `${overallUtil.toFixed(0)}%`}
+          </div>
+          {overallUtil != null && (
+            <div className="mt-2 h-1.5 w-24 overflow-hidden rounded-full bg-ink-faint">
+              <div
+                className="h-full rounded-full"
+                style={{
+                  width: `${Math.min(overallUtil, 100)}%`,
+                  background: utilColor(overallUtil),
+                }}
+              />
+            </div>
+          )}
+          <div className="mt-1 text-xs text-ink-dim">
+            {creditRows.length} card{creditRows.length === 1 ? "" : "s"}
+          </div>
+        </div>
       </div>
 
       {/* Accounts */}
