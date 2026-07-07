@@ -3,6 +3,7 @@ import { plaid } from "@/lib/plaid";
 import { encrypt } from "@/lib/crypto";
 import { db } from "@/db";
 import { connections } from "@/db/schema";
+import { syncAccountsForConnection } from "@/lib/sync-accounts";
 
 export async function POST(request: Request) {
   const { public_token, institution_name } = await request.json();
@@ -11,14 +12,20 @@ export async function POST(request: Request) {
   const accessToken = exchange.data.access_token;
   const itemId = exchange.data.item_id;
 
-  await db
+  const [conn] = await db
     .insert(connections)
     .values({
       itemId,
       institutionName: institution_name ?? null,
       accessToken: encrypt(accessToken),
     })
-    .onConflictDoNothing({ target: connections.itemId });
+    .onConflictDoUpdate({
+      target: connections.itemId,
+      set: { accessToken: encrypt(accessToken) },
+    })
+    .returning({ id: connections.id });
+
+  await syncAccountsForConnection(conn.id);
 
   return NextResponse.json({ ok: true, item_id: itemId });
 }

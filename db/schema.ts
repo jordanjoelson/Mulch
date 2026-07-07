@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import { integer, real, sqliteTable, text } from "drizzle-orm/sqlite-core";
 
 // One row per linked bank (a Plaid "Item").
 export const connections = sqliteTable("connections", {
@@ -8,6 +8,26 @@ export const connections = sqliteTable("connections", {
   institutionName: text("institution_name"),
   accessToken: text("access_token").notNull(), // encrypted at rest
   createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
+// One row per account under a linked bank (card, checking, savings, ...).
+export const accounts = sqliteTable("accounts", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  connectionId: integer("connection_id")
+    .notNull()
+    .references(() => connections.id),
+  accountId: text("account_id").notNull().unique(),
+  name: text("name"),
+  officialName: text("official_name"),
+  type: text("type"),
+  subtype: text("subtype"),
+  mask: text("mask"),
+  currentBalance: real("current_balance"),
+  availableBalance: real("available_balance"),
+  creditLimit: real("credit_limit"),
+  updatedAt: text("updated_at")
     .notNull()
     .default(sql`(current_timestamp)`),
 });
