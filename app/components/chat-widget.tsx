@@ -38,7 +38,7 @@ export function ChatWidget() {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Open assistant"
-        className="grain fixed bottom-6 right-6 z-50 grid h-12 w-12 place-items-center rounded-none bg-panel text-white shadow-lg ring-1 ring-white/10 transition-transform hover:scale-105"
+        className="grain fixed bottom-6 right-6 z-50 grid h-12 w-12 place-items-center rounded-md bg-panel text-white shadow-lg ring-1 ring-white/10 transition-transform hover:scale-105"
       >
         <Sparkles className="h-5 w-5 text-accent" />
       </button>
@@ -46,9 +46,9 @@ export function ChatWidget() {
   }
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex h-[30rem] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-none bg-panel text-white shadow-2xl ring-1 ring-white/10">
+    <div className="panel-gradient grain fixed bottom-6 right-6 z-50 flex h-[30rem] w-[22rem] max-w-[calc(100vw-3rem)] flex-col overflow-hidden rounded-md text-white shadow-2xl ring-1 ring-white/10">
       {/* Header */}
-      <div className="grain relative flex items-center justify-between border-b border-white/10 px-4 py-3">
+      <div className="flex items-center justify-between border-b border-white/15 px-4 py-3">
         <div className="flex items-center gap-2">
           <Sparkles className="h-4 w-4 text-accent" />
           <span className="font-mono text-[0.7rem] uppercase tracking-wider">

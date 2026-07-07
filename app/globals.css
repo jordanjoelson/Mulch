@@ -77,3 +77,15 @@ body {
   border-radius: inherit;
   pointer-events: none;
 }
+
+/* Mosaic left-panel gradient — used behind the expanded chat panel */
+.panel-gradient {
+  background: linear-gradient(
+    180deg,
+    #8ba5bb 0%,
+    #e1c4a9 45%,
+    #c48c5a 50%,
+    #525333 65%,
+    #2a2a1c 100%
+  );
+}
