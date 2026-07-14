@@ -213,3 +213,68 @@ export function findProduct(id: string | null): CardProduct | null {
   if (!id) return null;
   return CARD_CATALOG.find((p) => p.id === id) ?? null;
 }
+
+// Issuers write their own name in a dozen ways ("AMEX", "American Express Co").
+const ISSUER_ALIASES: Record<string, string[]> = {
+  Chase: ["chase", "jpmorgan", "jp morgan"],
+  "American Express": ["american express", "amex"],
+  Citi: ["citi", "citibank"],
+  "Capital One": ["capital one", "capitalone"],
+  Other: [],
+};
+
+function normalize(value: string | null): string {
+  return (value ?? "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/**
+ * Guesses which catalog product an account is, from what Plaid gives us.
+ *
+ * Plaid returns `official_name` — in production that's the issuer's real product
+ * string ("Chase Sapphire Reserve Visa Signature"), so it's usually enough. It is
+ * nullable though, and issuers are inconsistent ("CREDIT CARD"), so this is a
+ * suggestion the user confirms, never a silent decision.
+ *
+ * Deliberately strict: the issuer must match AND every word of the product name
+ * must appear. A loose match that turns a Freedom Flex into a Sapphire Reserve
+ * would quietly corrupt every recommendation downstream — the one failure mode
+ * nobody would ever catch. No match is much cheaper than a wrong match.
+ */
+export function matchProduct(account: {
+  name: string | null;
+  officialName: string | null;
+  institution: string | null;
+}): CardProduct | null {
+  const haystack = normalize(
+    [account.officialName, account.name, account.institution].join(" "),
+  );
+  if (!haystack) return null;
+
+  let best: CardProduct | null = null;
+  let bestScore = 0;
+
+  for (const product of CARD_CATALOG) {
+    // The generic fallbacks describe no real product, so they can't be detected.
+    if (product.issuer === "Other") continue;
+
+    const issuerHit = (ISSUER_ALIASES[product.issuer] ?? []).some((alias) =>
+      haystack.includes(alias),
+    );
+    if (!issuerHit) continue;
+
+    const words = normalize(product.name).split(" ");
+    if (!words.every((word) => haystack.includes(word))) continue;
+
+    // Prefer the most specific product: "sapphire reserve" (2 words) should win
+    // over a hypothetical "sapphire" (1 word) when both match.
+    if (words.length > bestScore) {
+      best = product;
+      bestScore = words.length;
+    }
+  }
+
+  return best;
+}
