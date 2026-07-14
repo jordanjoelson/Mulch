@@ -3,8 +3,10 @@ import { ExternalLink } from "lucide-react";
 import { db } from "@/db";
 import { accounts, connections } from "@/db/schema";
 import { issuerPayUrl } from "@/lib/issuer-links";
+import { cardSlug, cardArtSrc, cardGradients } from "@/lib/card-art";
 import { money, utilColor, daysUntil, dueLabel } from "@/lib/format";
 import { PageHeader, Card, EmptyState } from "@/app/components/ui";
+import { CardArt } from "@/app/components/card-art";
 
 export const dynamic = "force-dynamic";
 
@@ -27,6 +29,10 @@ export default async function CardsPage() {
 
   const cards = rows.filter((a) => a.subtype === "credit card" || a.creditLimit != null);
 
+  const gradients = cardGradients(
+    cards.map((c) => cardSlug(c.institution, c.name, c.mask)),
+  );
+
   return (
     <>
       <PageHeader
@@ -48,19 +54,30 @@ export default async function CardsPage() {
             const days = c.nextPaymentDueDate
               ? daysUntil(c.nextPaymentDueDate)
               : null;
+            const slug = cardSlug(c.institution, c.name, c.mask);
             return (
               <Card key={c.id} className="p-5">
-                <div className="mb-4 flex items-start justify-between">
-                  <div>
-                    <div className="font-medium">
-                      {c.name}{" "}
-                      {c.mask && (
-                        <span className="font-mono text-xs text-ink-dim">
-                          ••{c.mask}
-                        </span>
-                      )}
+                <div className="mb-4 flex items-start justify-between gap-4">
+                  <div className="flex min-w-0 items-center gap-3.5">
+                    <CardArt
+                      src={cardArtSrc(slug)}
+                      gradient={gradients.get(slug)!}
+                      mask={c.mask}
+                      alt={c.name ?? "Card"}
+                    />
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">
+                        {c.name}{" "}
+                        {c.mask && (
+                          <span className="font-mono text-xs text-ink-dim">
+                            ••{c.mask}
+                          </span>
+                        )}
+                      </div>
+                      <div className="truncate text-xs text-ink-dim">
+                        {c.institution}
+                      </div>
                     </div>
-                    <div className="text-xs text-ink-dim">{c.institution}</div>
                   </div>
                   {payUrl && (
                     <a
