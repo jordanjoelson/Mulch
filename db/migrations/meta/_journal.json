@@ -43,6 +43,13 @@
       "when": 1784060960438,
       "tag": "0005_overrated_white_tiger",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1784062120293,
+      "tag": "0006_strong_tigra",
+      "breakpoints": true
     }
   ]
 }

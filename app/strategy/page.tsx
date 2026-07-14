@@ -1,6 +1,15 @@
 import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { accounts, cardAssignments, connections, transactions } from "@/db/schema";
+import {
+  accounts,
+  cardAssignments,
+  cardTiers,
+  connections,
+  transactions,
+} from "@/db/schema";
+import { scoreCards, type Tier, type TierSource } from "@/lib/tiers";
+import { artFor, cardGradients } from "@/lib/card-art";
+import { TierBoard, type TierCard } from "@/app/components/tier-board";
 import { money } from "@/lib/format";
 import { findProduct, matchProduct, POINT_VALUES } from "@/lib/card-catalog";
 import {
@@ -101,6 +110,33 @@ export default async function StrategyPage() {
     .from(transactions)
     .where(and(gt(transactions.amount, 0), gte(transactions.date, since)));
 
+  // The board: engine scores every card, saved placements win where they exist.
+  const savedTiers = await db.select().from(cardTiers);
+  const placements = new Map(savedTiers.map((t) => [t.productId, t]));
+  const scored = scoreCards(
+    spendByCategory.flatMap((s) =>
+      s.category ? [{ category: s.category, total: s.total }] : [],
+    ),
+    owned.map((c) => c.product),
+  );
+  const tierGradients = cardGradients(scored.map((s) => s.product.id));
+  const tierCards: TierCard[] = scored.map((s) => {
+    const saved = placements.get(s.product.id);
+    return {
+      productId: s.product.id,
+      issuer: s.product.issuer,
+      name: s.product.name,
+      currency: s.product.currency,
+      annualFee: s.product.annualFee,
+      netValue: s.netValue,
+      owned: s.owned,
+      tier: (saved?.tier as Tier) ?? s.tier,
+      source: (saved?.source as TierSource) ?? "engine",
+      art: artFor(s.product.id, null),
+      gradient: tierGradients.get(s.product.id)!,
+    };
+  });
+
   const recs = recommendations(
     spendByCategory.flatMap((s) =>
       s.category ? [{ category: s.category, total: s.total }] : [],
@@ -187,6 +223,14 @@ export default async function StrategyPage() {
         </EmptyState>
       ) : (
         <>
+          <div className="mb-10">
+            <SectionHead
+              title="Tier list"
+              meta={<>scored against your spend</>}
+            />
+            <TierBoard cards={tierCards} />
+          </div>
+
           <div className="mb-10">
             <SectionHead
               title="Where to swipe"

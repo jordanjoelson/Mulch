@@ -49,6 +49,20 @@ export const cardAssignments = sqliteTable("card_assignments", {
     .default(sql`(current_timestamp)`),
 });
 
+// Where a card sits on the strategy tier list. A product with no row falls back
+// to the engine's computed tier, so the board is never empty. `source` records
+// who placed it — engine, you (drag), or the assistant.
+export const cardTiers = sqliteTable("card_tiers", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  productId: text("product_id").notNull().unique(),
+  tier: text("tier").notNull(),
+  source: text("source").notNull().default("user"),
+  note: text("note"),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
 // One row per budgeted category. A category with no row is simply unbudgeted;
 // clearing a limit deletes the row rather than storing a zero.
 export const budgets = sqliteTable("budgets", {
