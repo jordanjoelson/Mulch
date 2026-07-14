@@ -37,6 +37,18 @@ export const accounts = sqliteTable("accounts", {
     .default(sql`(current_timestamp)`),
 });
 
+// Maps a connected account to a product in the card catalog. Plaid can't tell us
+// that "Plaid Credit Card" is really a Sapphire Reserve, so the user says so once
+// and every earn-rate calculation hangs off this.
+export const cardAssignments = sqliteTable("card_assignments", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  accountId: text("account_id").notNull().unique(),
+  productId: text("product_id").notNull(),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
 // One row per budgeted category. A category with no row is simply unbudgeted;
 // clearing a limit deletes the row rather than storing a zero.
 export const budgets = sqliteTable("budgets", {
