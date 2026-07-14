@@ -100,9 +100,15 @@ export function Th({
 export function Td({
   children,
   className = "",
+  style,
 }: {
   children: React.ReactNode;
   className?: string;
+  style?: React.CSSProperties;
 }) {
-  return <td className={`px-6 py-4 text-[0.82rem] ${className}`}>{children}</td>;
+  return (
+    <td className={`px-6 py-4 text-[0.82rem] ${className}`} style={style}>
+      {children}
+    </td>
+  );
 }
