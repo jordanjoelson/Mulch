@@ -29,6 +29,13 @@
       "when": 1783394312959,
       "tag": "0003_yellow_the_hood",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1784060095468,
+      "tag": "0004_premium_sabra",
+      "breakpoints": true
     }
   ]
 }

@@ -37,6 +37,17 @@ export const accounts = sqliteTable("accounts", {
     .default(sql`(current_timestamp)`),
 });
 
+// One row per budgeted category. A category with no row is simply unbudgeted;
+// clearing a limit deletes the row rather than storing a zero.
+export const budgets = sqliteTable("budgets", {
+  id: integer("id").primaryKey({ autoIncrement: true }),
+  category: text("category").notNull().unique(),
+  monthlyLimit: real("monthly_limit").notNull(),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});
+
 // One row per transaction, kept in sync via Plaid's /transactions/sync.
 export const transactions = sqliteTable("transactions", {
   id: integer("id").primaryKey({ autoIncrement: true }),
