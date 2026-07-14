@@ -9,6 +9,9 @@ export type AssignableCard = {
   mask: string | null;
   institution: string | null;
   productId: string | null;
+  // True when productId is a guess from Plaid's official_name rather than a
+  // choice the user made. The advice already uses it, so say so plainly.
+  autoDetected: boolean;
 };
 
 // Grouping by issuer keeps a 15-card <select> navigable, and mirrors how people
@@ -24,11 +27,21 @@ export function CardAssigner({ cards }: { cards: AssignableCard[] }) {
           className="flex items-center justify-between gap-4 border-t border-ink-faint px-6 py-4 first:border-t-0"
         >
           <div className="min-w-0">
-            <div className="truncate text-[0.9rem] font-medium">
-              {c.name}{" "}
-              {c.mask && (
-                <span className="font-mono text-xs text-ink-dim">
-                  ••{c.mask}
+            <div className="flex items-center gap-2">
+              <span className="truncate text-[0.9rem] font-medium">
+                {c.name}{" "}
+                {c.mask && (
+                  <span className="font-mono text-xs text-ink-dim">
+                    ••{c.mask}
+                  </span>
+                )}
+              </span>
+              {c.autoDetected && (
+                <span
+                  title="Guessed from the account name your bank reports. Already used for advice — correct it if it's wrong."
+                  className="shrink-0 rounded border border-accent/40 bg-accent/10 px-1.5 py-0.5 font-mono text-[0.55rem] uppercase tracking-wider text-accent"
+                >
+                  auto
                 </span>
               )}
             </div>

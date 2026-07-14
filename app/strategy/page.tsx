@@ -2,7 +2,7 @@ import { and, desc, eq, gt, gte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts, cardAssignments, connections, transactions } from "@/db/schema";
 import { money } from "@/lib/format";
-import { findProduct, POINT_VALUES } from "@/lib/card-catalog";
+import { findProduct, matchProduct, POINT_VALUES } from "@/lib/card-catalog";
 import {
   recommendations,
   missedValue,
@@ -26,6 +26,7 @@ export default async function StrategyPage() {
     .select({
       accountId: accounts.accountId,
       name: accounts.name,
+      officialName: accounts.officialName,
       mask: accounts.mask,
       subtype: accounts.subtype,
       creditLimit: accounts.creditLimit,
@@ -40,27 +41,46 @@ export default async function StrategyPage() {
     (a) => a.subtype === "credit card" || a.creditLimit != null,
   );
 
-  const assignable: AssignableCard[] = cards.map((c) => ({
-    accountId: c.accountId,
-    name: c.name,
-    mask: c.mask,
-    institution: c.institution,
-    productId: c.productId,
-  }));
+  // A card the user hasn't identified may still be recognisable from Plaid's
+  // official_name. We act on that guess so the page works on first load, but
+  // flag it as unconfirmed rather than passing it off as fact.
+  const identified = cards.map((c) => {
+    const assigned = findProduct(c.productId);
+    const suggested = assigned
+      ? null
+      : matchProduct({
+          name: c.name,
+          officialName: c.officialName,
+          institution: c.institution,
+        });
+    return { card: c, product: assigned ?? suggested, suggested: !assigned };
+  });
+
+  const assignable: AssignableCard[] = identified.map(
+    ({ card, product, suggested }) => ({
+      accountId: card.accountId,
+      name: card.name,
+      mask: card.mask,
+      institution: card.institution,
+      productId: product?.id ?? null,
+      autoDetected: suggested && product != null,
+    }),
+  );
 
   // Only cards mapped to a catalog product can be reasoned about.
-  const owned: OwnedCard[] = cards.flatMap((c) => {
-    const product = findProduct(c.productId);
+  const owned: OwnedCard[] = identified.flatMap(({ card, product }) => {
     if (!product) return [];
     return [
       {
-        accountId: c.accountId,
+        accountId: card.accountId,
         label: `${product.issuer} ${product.name}`,
-        mask: c.mask,
+        mask: card.mask,
         product,
       },
     ];
   });
+
+  const unconfirmed = assignable.filter((c) => c.autoDetected).length;
 
   const spendByCategory = await db
     .select({
@@ -142,7 +162,16 @@ export default async function StrategyPage() {
       {/* The mapping has to come first — nothing below it works until Plaid's
           "Plaid Credit Card" is identified as a real product. */}
       <div className="mb-10">
-        <SectionHead title="Your cards" meta={<>identify each card</>} />
+        <SectionHead
+          title="Your cards"
+          meta={
+            unconfirmed > 0 ? (
+              <>{unconfirmed} auto-detected · confirm below</>
+            ) : (
+              <>identify each card</>
+            )
+          }
+        />
         {assignable.length === 0 ? (
           <EmptyState>No credit cards connected yet.</EmptyState>
         ) : (
