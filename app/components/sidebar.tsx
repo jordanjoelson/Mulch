@@ -8,6 +8,7 @@ import {
   ArrowLeftRight,
   PieChart,
   CreditCard,
+  Target,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -21,6 +22,7 @@ const items: NavItem[] = [
   { label: "Transactions", icon: ArrowLeftRight, href: "/transactions" },
   { label: "Spending", icon: PieChart, href: "/spending" },
   { label: "Cards", icon: CreditCard, href: "/cards" },
+  { label: "Strategy", icon: Target, href: "/strategy" },
 ];
 
 // Settings is a destination you reach for rarely, so it sits apart at the foot
