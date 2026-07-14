@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const ART_DIR = path.join(process.cwd(), "public", "cards");
-const EXTENSIONS = ["png", "webp", "jpg", "jpeg", "svg"];
+const EXTENSIONS = ["png", "webp", "avif", "jpg", "jpeg", "svg"];
 
 // Card art is dropped in by hand (Plaid doesn't supply it), so a card is keyed
 // by issuer + last four: "chase-sapphire-4242" -> public/cards/chase-sapphire-4242.png
@@ -28,6 +28,23 @@ export function cardArtSrc(slug: string): string | null {
     }
   }
   return null;
+}
+
+/**
+ * Artwork for a card, resolved product-first.
+ *
+ * A cover belongs to the *product* — every Sapphire Preferred looks the same, so
+ * one `chase-sapphire-preferred.webp` serves your account, the tier list, and any
+ * card you don't even hold. The account-level file (issuer-1234.png) still wins
+ * when present, which is what you'd want for a custom or metal-art card.
+ */
+export function artFor(
+  productId: string | null,
+  accountSlug: string | null,
+): string | null {
+  const accountArt = accountSlug ? cardArtSrc(accountSlug) : null;
+  if (accountArt) return accountArt;
+  return productId ? cardArtSrc(productId) : null;
 }
 
 // Muted, on-brand fallbacks. Kept dark so a card still reads as a card, and so
