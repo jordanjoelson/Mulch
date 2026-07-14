@@ -91,6 +91,17 @@ export const CARD_CATALOG: CardProduct[] = [
     earn: { GENERAL_SERVICES: 5, RENT_AND_UTILITIES: 2, FOOD_AND_DRINK: 2 },
     ecosystem: "Chase Trifecta",
   },
+  {
+    id: "chase-ink-business-unlimited",
+    issuer: "Chase",
+    name: "Ink Business Unlimited",
+    currency: "UR",
+    annualFee: 0,
+    base: 1.5,
+    earn: {},
+    ecosystem: "Chase Trifecta",
+    notes: "Flat 1.5x — the business-side twin of the Freedom Unlimited.",
+  },
 
   // ---- Amex / Membership Rewards ----
   {
@@ -174,6 +185,17 @@ export const CARD_CATALOG: CardProduct[] = [
     base: 2,
     earn: { TRAVEL: 5 },
     ecosystem: "Capital One",
+  },
+  {
+    id: "capital-one-venture-business",
+    issuer: "Capital One",
+    name: "Venture Business",
+    currency: "C1",
+    annualFee: 95,
+    base: 2,
+    earn: {},
+    ecosystem: "Capital One",
+    notes: "ASSUMPTION: 2x flat, $95 fee. Verify before trusting its ranking.",
   },
   {
     id: "capital-one-savor",
